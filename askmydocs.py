@@ -3,21 +3,30 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.llms import OpenAI
-from langchain.chains import RetrievalQA
 from langchain.chains import ConversationalRetrievalChain
+from dotenv import load_dotenv
+load_dotenv()
 
+st.set_page_config(page_title="Ask My Docs", layout="wide")
 st.title("Ask My Docs")
 
-st.sidebar.header("Upload a document")
-uploaded_file = st.sidebar.file_uploader("Upload a document (txt, pdf)", type=["txt", "pdf"])
+st.sidebar.header("Upload File")
+uploaded_file = st.sidebar.file_uploader("Upload a file (txt, pdf)", type=["txt", "pdf"])
+submit_button = st.sidebar.button("Submit", key= "file_submit_button")
 
 # Initialize session state for chat history
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+if "qa_chain" not in st.session_state:
+    st.session_state.qa_chain = None
+
+if "file_uploaded" not in st.session_state:
+    st.session_state.file_uploaded = False
+
 # Process the uploaded file and create embeddings
-def process_file(uploaded_file):
-    if uploaded_file is not None:
+if submit_button and uploaded_file:
+    try:
         # Load the document
         file_text = ""
         if uploaded_file.type == "text/plain":
@@ -29,8 +38,8 @@ def process_file(uploaded_file):
                 file_text += page.extract_text()
 
         # Split the document into chunks
-        splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        texts = splitter.split_documents(file_text)
+        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        texts = text_splitter.split_text(file_text)
 
         # Create embeddings for the chunks
         # embeddings = OpenAIEmbeddings()
@@ -41,33 +50,34 @@ def process_file(uploaded_file):
         # db = FAISS.from_documents(texts, embeddings)
         db = FAISS.from_texts(texts, embeddings)
 
-        return db
-    return None
-
-# Function to generate a response using RAG
-def generate_response(query, db):
-    qa = RetrievalQA.from_chain_type(llm=OpenAI(), chain_type="stuff", retriever=db.as_retriever())
-    response = qa.run(query)
-    return response
+        retriever = db.as_retriever()
+        st.session_state.qa_chain = ConversationalRetrievalChain(
+            retriever=retriever,
+            llm=OpenAI(temperature=0) # model="gpt-4o"
+        )
+        st.session_state.file_uploaded = True
+        st.success("File uploaded successfully")
+    except Exception as e:
+        st.error(f"Error processing file: {str(e)}")
 
 # Main Chat Interface
 st.header("Chat with your documents")
 
-# Display the chat history
-for message in st.session_state.chat_history:
-    st.write(f"{message['role']}: {message['content']}")
+if st.session_state.file_uploaded:
+    user_input = st.text_input("Ask a question about the file:")
 
-# Input for user message
-user_query = st.text_input("You: ", key="user_query")
+    if st.button("Send") and user_input:
+        try:
+            response = st.session_state.qa_chain.run(
+                input=user_input, chat_history=st.session_state.chat_history
+            )
+            st.session_state.chat_history.append((user_input, response))
+        except Exception as e:
+            st.error(f"An error occurred while generating the response: {str(e)}")
 
-# Submit button
-if st.button("Submit"):
-    if uploaded_file is not None:
-        db = process_file(uploaded_file)
-        if db:
-            response = generate_response(user_query, db)
-            st.session_state.chat_history.append({"role": "You", "content": user_query})
-            st.session_state.chat_history.append({"role": "AskMyDocs", "content": response})
-            st.experimental_rerun()
-    else:
-        st.error("Please upload a document first")
+    # Display chat history
+    for question, answer in st.session_state.chat_history:
+        st.write(f"**You:** {question}")
+        st.write(f"**File:** {answer}")
+else:
+    st.info("Please upload a file to start chatting.")
