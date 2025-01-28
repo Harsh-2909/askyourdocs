@@ -4,15 +4,23 @@ from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_openai.llms import OpenAI
 from langchain.chains import ConversationalRetrievalChain
+from langchain.chains import (
+    create_history_aware_retriever,
+    create_retrieval_chain,
+)
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from dotenv import load_dotenv
+
 load_dotenv()
 
 st.set_page_config(page_title="Ask My Docs", layout="wide")
 st.title("Ask My Docs")
 
 st.sidebar.header("Upload File")
-uploaded_file = st.sidebar.file_uploader("Upload a file (txt, pdf)", type=["txt", "pdf"])
-submit_button = st.sidebar.button("Submit", key= "file_submit_button")
+uploaded_file = st.sidebar.file_uploader(
+    "Upload a file (txt, pdf)", type=["txt", "pdf"]
+)
+submit_button = st.sidebar.button("Submit", key="file_submit_button")
 
 # Initialize session state for chat history
 if "chat_history" not in st.session_state:
@@ -30,11 +38,14 @@ if submit_button and uploaded_file:
         # Load the document
         file_text = ""
         print("Processing uploaded file...")
-        print(f"Uploaded file type: {uploaded_file.type}. Uploaded file name: {uploaded_file.name}")
+        print(
+            f"Uploaded file type: {uploaded_file.type}. Uploaded file name: {uploaded_file.name}"
+        )
         if uploaded_file.type == "text/plain":
             file_text = uploaded_file.getvalue().decode("utf-8")
         elif uploaded_file.type == "application/pdf":
             from PyPDF2 import PdfReader
+
             pdf_reader = PdfReader(uploaded_file)
             for page in pdf_reader.pages:
                 file_text += page.extract_text()
@@ -50,9 +61,29 @@ if submit_button and uploaded_file:
         db = FAISS.from_texts(texts, embeddings)
 
         retriever = db.as_retriever()
+
+        # Contextualize question
+        contextualize_q_system_prompt = (
+            "Given a chat history and the latest user question "
+            "which might reference context in the chat history, "
+            "formulate a standalone question which can be understood "
+            "without the chat history. Do NOT answer the question, just "
+            "reformulate it if needed and otherwise return it as is."
+        )
+        contextualize_q_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", contextualize_q_system_prompt),
+                MessagesPlaceholder("chat_history"),
+                ("human", "{input}"),
+            ]
+        )
+        st.session_state.history_retriever = create_history_aware_retriever(
+            retriever,
+            contextualize_q_prompt,
+            llm=OpenAI(temperature=0, model="gpt-4o-mini"),
+        )
         st.session_state.qa_chain = ConversationalRetrievalChain.from_llm(
-            retriever=retriever,
-            llm=OpenAI(temperature=0, model="gpt-4o-mini")
+            retriever=retriever, llm=OpenAI(temperature=0, model="gpt-4o-mini")
         )
         st.session_state.file_uploaded = True
         st.success("File uploaded successfully")
