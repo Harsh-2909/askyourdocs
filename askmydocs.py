@@ -1,5 +1,7 @@
-import streamlit as st
+import os
 import traceback
+import streamlit as st
+from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import CharacterTextSplitter
@@ -7,9 +9,13 @@ from langchain.chains.history_aware_retriever import create_history_aware_retrie
 from langchain.chains.retrieval import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from dotenv import load_dotenv
 
 load_dotenv()
+
+OPENAI_CHAT_MODEL: str = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+OPENAI_EMBEDDINGS_MODEL: str = os.getenv(
+    "OPENAI_EMBEDDINGS_MODEL", "text-embedding-3-small"
+)
 
 st.set_page_config(page_title="Ask My Docs", layout="wide")
 st.title("Ask My Docs")
@@ -55,11 +61,11 @@ if submit_button and uploaded_file:
 
         # Create embeddings for the chunks
         print("Creating embeddings for the chunks...")
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        embeddings = OpenAIEmbeddings(model=OPENAI_EMBEDDINGS_MODEL)
         db = FAISS.from_texts(texts, embeddings)
 
         retriever = db.as_retriever()
-        llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
+        llm = ChatOpenAI(temperature=0, model=OPENAI_CHAT_MODEL)
 
         # Contextualize question
         print("Creating conversational retrieval chain...")
@@ -103,9 +109,6 @@ if submit_button and uploaded_file:
             history_aware_retriever, question_answer_chain
         )
         st.session_state.qa_chain = rag_chain
-        # st.session_state.qa_chain = ConversationalRetrievalChain.from_llm(
-        #     retriever=retriever, llm=OpenAI(temperature=0, model="gpt-4o-mini")
-        # )
         st.session_state.file_uploaded = True
         print("File uploaded successfully")
         st.success("File uploaded successfully")
