@@ -1,13 +1,11 @@
 import streamlit as st
-from langchain_openai import OpenAIEmbeddings
+import traceback
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_openai.llms import OpenAI
-from langchain.chains import ConversationalRetrievalChain
-from langchain.chains import (
-    create_history_aware_retriever,
-    create_retrieval_chain,
-)
+from langchain.chains.history_aware_retriever import create_history_aware_retriever
+from langchain.chains.retrieval import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from dotenv import load_dotenv
 
@@ -61,8 +59,10 @@ if submit_button and uploaded_file:
         db = FAISS.from_texts(texts, embeddings)
 
         retriever = db.as_retriever()
+        llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
 
         # Contextualize question
+        print("Creating conversational retrieval chain...")
         contextualize_q_system_prompt = (
             "Given a chat history and the latest user question "
             "which might reference context in the chat history, "
@@ -77,15 +77,37 @@ if submit_button and uploaded_file:
                 ("human", "{input}"),
             ]
         )
-        st.session_state.history_retriever = create_history_aware_retriever(
+        history_aware_retriever = create_history_aware_retriever(
+            llm,
             retriever,
-            contextualize_q_prompt,
-            llm=OpenAI(temperature=0, model="gpt-4o-mini"),
+            prompt=contextualize_q_prompt,
         )
-        st.session_state.qa_chain = ConversationalRetrievalChain.from_llm(
-            retriever=retriever, llm=OpenAI(temperature=0, model="gpt-4o-mini")
+        qa_system_prompt = (
+            "You are an assistant for question-answering tasks. Use "
+            "the following pieces of retrieved context to answer the "
+            "question. If you don't know the answer, just say that you "
+            "don't know. Use three sentences maximum and keep the answer "
+            "concise."
+            "\n\n"
+            "{context}"
         )
+        qa_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", qa_system_prompt),
+                MessagesPlaceholder("chat_history"),
+                ("human", "{input}"),
+            ]
+        )
+        question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
+        rag_chain = create_retrieval_chain(
+            history_aware_retriever, question_answer_chain
+        )
+        st.session_state.qa_chain = rag_chain
+        # st.session_state.qa_chain = ConversationalRetrievalChain.from_llm(
+        #     retriever=retriever, llm=OpenAI(temperature=0, model="gpt-4o-mini")
+        # )
         st.session_state.file_uploaded = True
+        print("File uploaded successfully")
         st.success("File uploaded successfully")
     except Exception as e:
         st.error(f"Error processing file: {str(e)}")
@@ -97,13 +119,22 @@ if st.session_state.file_uploaded:
     user_input = st.text_input("Ask a question about the file:")
 
     if st.button("Send") and user_input:
+        print("Generating response...")
         try:
-            response = st.session_state.qa_chain.invoke(
-                input=user_input, chat_history=st.session_state.chat_history
+            print(
+                f"[DEBUG] User input: {user_input}\nChat history: {st.session_state.chat_history}"
             )
+            response = st.session_state.qa_chain.invoke(
+                {
+                    "input": user_input,
+                    "chat_history": st.session_state.chat_history,
+                }
+            )
+            print(f"[DEBUG] Response: {response}")
             st.session_state.chat_history.append((user_input, response))
         except Exception as e:
             st.error(f"An error occurred while generating the response: {str(e)}")
+            traceback.print_exc()
 
     # Display chat history
     for question, answer in st.session_state.chat_history:
