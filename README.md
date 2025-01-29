@@ -34,10 +34,12 @@ Before running the app, ensure you have the following installed:
 
 3. Set up your OpenAI API key:
 
-   Create a `.env` file in the project directory and add your OpenAI API key:
+   Create a `.env` file in the project directory and add your OpenAI API key and model names (optional) as follows:
 
    ```
    OPENAI_API_KEY=your-api-key-here
+   OPENAI_CHAT_MODEL=gpt-4o-mini (optional)
+   OPENAI_EMBEDDING_MODEL=text-embedding-3-small (optional)
    ```
 
    Alternatively, you can set the environment variable directly in your terminal:
@@ -56,7 +58,7 @@ Before running the app, ensure you have the following installed:
 
 2. Open your browser and navigate to the URL provided in the terminal (usually `http://localhost:8501`).
 
-3. Upload a file using the sidebar. Supported file types include `.txt`, `.pdf`, and `.docx`.
+3. Upload a file using the sidebar. Supported file types include `.txt`, `.pdf`, and `.md`.
 
 4. Once the file is uploaded, you can start chatting with it. Enter your query in the chat input box and click "Submit" to get a response.
 
