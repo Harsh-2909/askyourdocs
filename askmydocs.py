@@ -22,7 +22,7 @@ st.title("Ask My Docs")
 
 st.sidebar.header("Upload File")
 uploaded_file = st.sidebar.file_uploader(
-    "Upload a file (txt, pdf)", type=["txt", "pdf"]
+    "Upload a file (txt, pdf, md)", type=["txt", "pdf", "md"]
 )
 submit_button = st.sidebar.button("Submit", key="file_submit_button")
 
@@ -45,7 +45,7 @@ if submit_button and uploaded_file:
         print(
             f"Uploaded file type: {uploaded_file.type}. Uploaded file name: {uploaded_file.name}"
         )
-        if uploaded_file.type == "text/plain":
+        if uploaded_file.type in ["text/plain", "text/markdown"]:
             file_text = uploaded_file.getvalue().decode("utf-8")
         elif uploaded_file.type == "application/pdf":
             from PyPDF2 import PdfReader
@@ -53,6 +53,8 @@ if submit_button and uploaded_file:
             pdf_reader = PdfReader(uploaded_file)
             for page in pdf_reader.pages:
                 file_text += page.extract_text()
+        else:
+            raise ValueError("Unsupported file type")
 
         # Split the document into chunks
         print("Splitting text into chunks...")
