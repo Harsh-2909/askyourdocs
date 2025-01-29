@@ -131,7 +131,7 @@ if st.session_state.file_uploaded:
                 }
             )
             print(f"[DEBUG] Response: {response}")
-            st.session_state.chat_history.append((user_input, response))
+            st.session_state.chat_history.append((user_input, response["answer"]))
         except Exception as e:
             st.error(f"An error occurred while generating the response: {str(e)}")
             traceback.print_exc()
