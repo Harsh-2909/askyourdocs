@@ -110,7 +110,8 @@ if submit_button and uploaded_file:
         rag_chain = create_retrieval_chain(
             history_aware_retriever, question_answer_chain
         )
-        st.session_state.qa_chain = rag_chain
+        # Only pick the answer from the response
+        st.session_state.qa_chain = rag_chain.pick("answer")
         st.session_state.file_uploaded = True
         print("File uploaded successfully")
         st.success("File uploaded successfully")
@@ -121,7 +122,7 @@ if submit_button and uploaded_file:
 st.header("Chat with your documents")
 
 # Display chat history if available
-# Its there to ensure that the chat history is displayed even if the app is reloaded
+# It ensures that the chat history is displayed even if the app is reloaded
 for message_type, message in st.session_state.chat_history:
     with st.chat_message(message_type):
         st.markdown(message)
@@ -134,18 +135,18 @@ if st.session_state.file_uploaded:
             st.markdown(user_input)
         # st.spinner("Generating response..."):
         print("Generating response...")
-        print(f"User input: {user_input}\History: {st.session_state.chat_history}")
+        print(f"User input: {user_input}\nHistory: {st.session_state.chat_history}")
         try:
             with st.chat_message("assistant"):
-                response = st.session_state.qa_chain.invoke(
+                stream = st.session_state.qa_chain.stream(
                     {
                         "input": user_input,
                         "chat_history": st.session_state.chat_history,
                     }
                 )
+                response = st.write_stream(stream)
                 print(f"Response: {response}")
-                st.write(response["answer"])
-            st.session_state.chat_history.append(("assistant", response["answer"]))
+            st.session_state.chat_history.append(("assistant", response))
         except Exception as e:
             st.error(f"An error occurred while generating the response: {str(e)}")
             traceback.print_exc()
