@@ -121,9 +121,9 @@ if submit_button and uploaded_file:
 st.header("Chat with your documents")
 
 if st.session_state.file_uploaded:
-    user_input = st.text_input("Ask a question about the file:")
+    user_input = st.chat_input("Ask a question about the file")
 
-    if st.button("Send") and user_input:
+    if user_input:
         print("Generating response...")
         try:
             print(
@@ -144,6 +144,7 @@ if st.session_state.file_uploaded:
 
     # Display chat history
     for message_type, message in st.session_state.chat_history:
-        st.write(f"**{message_type.capitalize()}:** {message}")
+        with st.chat_message(message_type):
+            st.markdown(message)
 else:
     st.info("Please upload a file to start chatting.")
