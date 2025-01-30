@@ -1,6 +1,7 @@
 import os
 import traceback
 import streamlit as st
+import base64
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -36,15 +37,44 @@ if "qa_chain" not in st.session_state:
 if "file_uploaded" not in st.session_state:
     st.session_state.file_uploaded = False
 
+
+def display_file(file):
+    if file.type == "text/plain":
+        display_text(file)
+    elif file.type == "text/markdown":
+        display_markdown(file)
+    elif file.type == "application/pdf":
+        display_pdf(file)
+    else:
+        st.error("Unsupported file type")
+
+
+def display_text(file):
+    st.markdown("### Text Preview")
+    st.text(file.getvalue().decode("utf-8"))
+
+
+def display_markdown(file):
+    st.markdown("### Markdown Preview")
+    st.markdown(file.getvalue().decode("utf-8"))
+
+
+def display_pdf(file):
+    st.markdown("### PDF Preview")
+    base64_pdf = base64.b64encode(file.read()).decode("utf-8")
+    pdf_display = f"""<iframe src="data:application/pdf;base64,{base64_pdf}" width="400" height="100%" type="application/pdf"
+                        style="height:100vh; width:100%"
+                    >
+                    </iframe>"""
+    st.markdown(pdf_display, unsafe_allow_html=True)
+
+
 # Process the uploaded file and create embeddings
 if submit_button and uploaded_file:
     try:
         # Load the document
         file_text = ""
         print("Processing uploaded file...")
-        print(
-            f"Uploaded file type: {uploaded_file.type}. Uploaded file name: {uploaded_file.name}"
-        )
         if uploaded_file.type in ["text/plain", "text/markdown"]:
             file_text = uploaded_file.getvalue().decode("utf-8")
         elif uploaded_file.type == "application/pdf":
@@ -55,6 +85,9 @@ if submit_button and uploaded_file:
                 file_text += page.extract_text()
         else:
             raise ValueError("Unsupported file type")
+
+        with st.sidebar.expander("File Preview", expanded=True):
+            display_file(uploaded_file)
 
         # Split the document into chunks
         print("Splitting text into chunks...")
