@@ -120,31 +120,35 @@ if submit_button and uploaded_file:
 # Main Chat Interface
 st.header("Chat with your documents")
 
-if st.session_state.file_uploaded:
-    user_input = st.chat_input("Ask a question about the file")
+# Display chat history if available
+# Its there to ensure that the chat history is displayed even if the app is reloaded
+for message_type, message in st.session_state.chat_history:
+    with st.chat_message(message_type):
+        st.markdown(message)
 
-    if user_input:
+if st.session_state.file_uploaded:
+    if user_input := st.chat_input("Ask a question about the file"):
+        # Add user input to chat history and display it
+        st.session_state.chat_history.append(("user", user_input))
+        with st.chat_message("user"):
+            st.markdown(user_input)
+        # st.spinner("Generating response..."):
         print("Generating response...")
+        print(f"User input: {user_input}\History: {st.session_state.chat_history}")
         try:
-            print(
-                f"[DEBUG] User input: {user_input}\nChat history: {st.session_state.chat_history}"
-            )
-            response = st.session_state.qa_chain.invoke(
-                {
-                    "input": user_input,
-                    "chat_history": st.session_state.chat_history,
-                }
-            )
-            print(f"[DEBUG] Response: {response}")
-            st.session_state.chat_history.append(("user", user_input))
+            with st.chat_message("assistant"):
+                response = st.session_state.qa_chain.invoke(
+                    {
+                        "input": user_input,
+                        "chat_history": st.session_state.chat_history,
+                    }
+                )
+                print(f"Response: {response}")
+                st.write(response["answer"])
             st.session_state.chat_history.append(("assistant", response["answer"]))
         except Exception as e:
             st.error(f"An error occurred while generating the response: {str(e)}")
             traceback.print_exc()
 
-    # Display chat history
-    for message_type, message in st.session_state.chat_history:
-        with st.chat_message(message_type):
-            st.markdown(message)
 else:
     st.info("Please upload a file to start chatting.")
