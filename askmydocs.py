@@ -38,28 +38,49 @@ if "file_uploaded" not in st.session_state:
     st.session_state.file_uploaded = False
 
 
-def display_file(file):
+def display_file(file) -> None:
+    """Function to display the uploaded file in Streamlit based on file type
+
+    Args:
+        file (BytesIO): Uploaded file to display
+    """
     if file.type == "text/plain":
         display_text(file)
     elif file.type == "text/markdown":
         display_markdown(file)
     elif file.type == "application/pdf":
-        display_pdf(file)
+        print("PDF Display is currently disabled due to a bug.")
+        # display_pdf(file)
     else:
         st.error("Unsupported file type")
 
 
-def display_text(file):
+def display_text(file) -> None:
+    """Function to display text file in Streamlit
+
+    Args:
+        file (BytesIO): Text file to display
+    """
     st.markdown("### Text Preview")
     st.text(file.getvalue().decode("utf-8"))
 
 
-def display_markdown(file):
+def display_markdown(file) -> None:
+    """Function to display Markdown file in Streamlit
+
+    Args:
+        file (BytesIO): Markdown file to display
+    """
     st.markdown("### Markdown Preview")
     st.markdown(file.getvalue().decode("utf-8"))
 
 
-def display_pdf(file):
+def display_pdf(file) -> None:
+    """Function to display PDF file in Streamlit
+
+    Args:
+        file (BytesIO): PDF file to display
+    """
     st.markdown("### PDF Preview")
     base64_pdf = base64.b64encode(file.read()).decode("utf-8")
     pdf_display = f"""<iframe src="data:application/pdf;base64,{base64_pdf}" width="400" height="100%" type="application/pdf"
