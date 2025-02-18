@@ -1,4 +1,3 @@
-import os
 import traceback
 import streamlit as st
 import base64
@@ -13,14 +12,28 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 load_dotenv()
 
-OPENAI_CHAT_MODEL: str = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
-OPENAI_EMBEDDINGS_MODEL: str = os.getenv(
-    "OPENAI_EMBEDDINGS_MODEL", "text-embedding-3-small"
-)
-
 st.set_page_config(page_title="Ask My Docs", layout="wide")
 st.title("Ask My Docs")
 
+st.sidebar.header("OpenAI API Configuration")
+st.sidebar.markdown("Your OpenAI API Key")
+openai_api_key = st.sidebar.text_input(
+    "API Key", type="password", key="openai_api_key")
+st.sidebar.markdown("OpenAI Chat Model")
+openai_chat_model = st.sidebar.selectbox(
+    "Chat Model",
+    options=[
+        "gpt-4o-mini",
+        "gpt-4o",
+        "gpt-4o-turbo",
+        "gpt-3.5-turbo",
+        "o1-mini",
+        "o1",
+        "o3-mini",
+    ],
+    index=0,
+    key="openai_chat_model",
+)
 st.sidebar.header("Upload File")
 uploaded_file = st.sidebar.file_uploader(
     "Upload a file (txt, pdf, md)", type=["txt", "pdf", "md"]
@@ -112,16 +125,19 @@ if submit_button and uploaded_file:
 
         # Split the document into chunks
         print("Splitting text into chunks...")
-        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        text_splitter = CharacterTextSplitter(
+            chunk_size=1000, chunk_overlap=200)
         texts = text_splitter.split_text(file_text)
 
         # Create embeddings for the chunks
         print("Creating embeddings for the chunks...")
-        embeddings = OpenAIEmbeddings(model=OPENAI_EMBEDDINGS_MODEL)
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         db = FAISS.from_texts(texts, embeddings)
 
         retriever = db.as_retriever()
-        llm = ChatOpenAI(temperature=0, model=OPENAI_CHAT_MODEL)
+        llm = ChatOpenAI(temperature=0,
+                         model=openai_chat_model,
+                         api_key=openai_api_key)
 
         # Contextualize question
         print("Creating conversational retrieval chain...")
@@ -189,7 +205,6 @@ if st.session_state.file_uploaded:
             st.markdown(user_input)
         # st.spinner("Generating response..."):
         print("Generating response...")
-        print(f"User input: {user_input}\nHistory: {st.session_state.chat_history}")
         try:
             with st.chat_message("assistant"):
                 stream = st.session_state.qa_chain.stream(
@@ -199,10 +214,10 @@ if st.session_state.file_uploaded:
                     }
                 )
                 response = st.write_stream(stream)
-                print(f"Response: {response}")
             st.session_state.chat_history.append(("assistant", response))
         except Exception as e:
-            st.error(f"An error occurred while generating the response: {str(e)}")
+            st.error(
+                f"An error occurred while generating the response: {str(e)}")
             traceback.print_exc()
 
 else:
