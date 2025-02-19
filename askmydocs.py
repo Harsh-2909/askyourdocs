@@ -1,7 +1,6 @@
 import traceback
 import streamlit as st
 import base64
-from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import CharacterTextSplitter
@@ -9,8 +8,6 @@ from langchain.chains.history_aware_retriever import create_history_aware_retrie
 from langchain.chains.retrieval import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-
-load_dotenv()
 
 st.set_page_config(page_title="Ask My Docs", layout="wide")
 st.title("Ask My Docs")
