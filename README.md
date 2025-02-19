@@ -29,23 +29,7 @@ Before running the app, ensure you have the following installed:
 2. Install the required dependencies:
 
    ```bash
-   pip install streamlit langchain openai faiss-cpu
-   ```
-
-3. Set up your OpenAI API key:
-
-   Create a `.env` file in the project directory and add your OpenAI API key and model names (optional) as follows:
-
-   ```
-   OPENAI_API_KEY=your-api-key-here
-   OPENAI_CHAT_MODEL=gpt-4o-mini (optional)
-   OPENAI_EMBEDDING_MODEL=text-embedding-3-small (optional)
-   ```
-
-   Alternatively, you can set the environment variable directly in your terminal:
-
-   ```bash
-   export OPENAI_API_KEY=your-api-key-here
+   pip install -r requirements.txt
    ```
 
 ## Usage
@@ -53,7 +37,7 @@ Before running the app, ensure you have the following installed:
 1. Run the Streamlit app:
 
    ```bash
-   streamlit run askyourdocs.py
+   streamlit run askmydocs.py
    ```
 
 2. Open your browser and navigate to the URL provided in the terminal (usually `http://localhost:8501`).
