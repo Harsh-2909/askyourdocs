@@ -15,7 +15,6 @@ Before running the app, ensure you have the following installed:
 
 - Python 3.8 or higher
 - Streamlit
-- OpenAI API key (for embeddings and GPT models)
 
 ## Installation
 

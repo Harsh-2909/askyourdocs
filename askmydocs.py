@@ -101,7 +101,7 @@ def display_pdf(file) -> None:
 
 
 # Process the uploaded file and create embeddings
-if submit_button and uploaded_file:
+if submit_button and uploaded_file and openai_api_key:
     try:
         # Load the document
         file_text = ""
