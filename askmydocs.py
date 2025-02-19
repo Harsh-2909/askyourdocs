@@ -128,7 +128,8 @@ if submit_button and uploaded_file and openai_api_key:
 
         # Create embeddings for the chunks
         print("Creating embeddings for the chunks...")
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        embeddings = OpenAIEmbeddings(
+            model="text-embedding-3-small", api_key=openai_api_key)
         db = FAISS.from_texts(texts, embeddings)
 
         retriever = db.as_retriever()
