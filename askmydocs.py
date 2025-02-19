@@ -100,22 +100,35 @@ def display_pdf(file) -> None:
     st.markdown(pdf_display, unsafe_allow_html=True)
 
 
+def process_file(uploaded_file) -> str:
+    """Function to process the uploaded file based on file type and return the text content
+
+    Args:
+        uploaded_file (BytesIO): Uploaded file to process
+
+    Returns:
+        str: Text content of the uploaded_file
+    """
+    file_text = ""
+    if uploaded_file.type in ["text/plain", "text/markdown"]:
+        file_text = uploaded_file.getvalue().decode("utf-8")
+    elif uploaded_file.type == "application/pdf":
+        from PyPDF2 import PdfReader
+
+        pdf_reader = PdfReader(uploaded_file)
+        for page in pdf_reader.pages:
+            file_text += page.extract_text()
+    else:
+        raise ValueError("Unsupported file type")
+    return file_text
+
+
 # Process the uploaded file and create embeddings
 if submit_button and uploaded_file and openai_api_key:
     try:
         # Load the document
-        file_text = ""
+        file_text = process_file(uploaded_file)
         print("Processing uploaded file...")
-        if uploaded_file.type in ["text/plain", "text/markdown"]:
-            file_text = uploaded_file.getvalue().decode("utf-8")
-        elif uploaded_file.type == "application/pdf":
-            from PyPDF2 import PdfReader
-
-            pdf_reader = PdfReader(uploaded_file)
-            for page in pdf_reader.pages:
-                file_text += page.extract_text()
-        else:
-            raise ValueError("Unsupported file type")
 
         with st.sidebar.expander("File Preview", expanded=True):
             display_file(uploaded_file)
